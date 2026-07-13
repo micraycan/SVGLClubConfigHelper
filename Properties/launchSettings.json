@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "SVGLClubConfigHelper (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "SVGLClubConfigHelper (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
