@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -7,110 +8,156 @@ using SVGLClubConfigHelper.Models;
 using SVGLClubConfigHelper.Services;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Windows.ApplicationModel.DataTransfer;
 
 namespace SVGLClubConfigHelper.ViewModels
 {
     public partial class EntryListEditorViewModel : ObservableObject
     {
-        private readonly IContentLoaderService _contentLoaderService;
-
-        [ObservableProperty]
-        public partial List<Car> CarList { get; set; } = new();
-
-        [ObservableProperty]
-        public partial Visibility CarListVisible { get; set; } = Visibility.Collapsed;
-
-        [ObservableProperty]
-        public partial Visibility ProgressBarVisible { get; set; } = Visibility.Visible;
+        private readonly IContentLibraryService _contentLibraryService;
+        private readonly IEntryListService _entryListService;
 
         [ObservableProperty]
         public partial bool CarListLoadingError { get; set; } = false;
 
         [ObservableProperty]
-        public partial string CarListSearchBar { get; set; } = string.Empty;
+        public partial List<Car> CarList { get; set; } = new();
 
         [ObservableProperty]
-        public partial Car? SelectedCar { get; set; } = null;
+        public partial ObservableCollection<CarEntry> EntryList { get; set; } = new();
 
         [ObservableProperty]
-        public partial bool IsCarSelected { get; set; } = false;
+        public partial string CarSearchBar { get; set; } = string.Empty;
 
         [ObservableProperty]
-        public partial List<Skin> AvailableSkins { get; set; } = new();
+        public partial CarEntry? SelectedCarEntry { get; set; }
 
         [ObservableProperty]
-        public partial Skin? SelectedSkin { get; set; } = null;
+        public partial bool IsCarEntrySelected { get; set; } = false;
 
         [ObservableProperty]
-        public partial ImageSource? SkinPreview { get; set; } = null;
+        public partial string EntryListString { get; set; } = string.Empty;
 
-        private List<Car> _cachedList = new();
+        [ObservableProperty]
+        public partial string CarSelectionString { get; set; } = string.Empty;
 
-        public EntryListEditorViewModel(IContentLoaderService contentLoaderService)
+        private List<Car> _cachedCarList = new();
+        private EntryList? _entryList;
+
+        public EntryListEditorViewModel(IContentLibraryService contentLibraryService, IEntryListService entryListService)
         {
-            _contentLoaderService = contentLoaderService;
+            _contentLibraryService = contentLibraryService;
+            _entryListService = entryListService;
         }
 
-        public async Task InitializeAsync()
+        public async Task InitializePage()
         {
-            CarListLoadingError = !_contentLoaderService.CanLoadContent();
+            CarListLoadingError = !await _contentLibraryService.TryLoadContent();
 
             if (CarListLoadingError) { return; }
+            CarList = _contentLibraryService.LoadedContent.Cars;
+            _cachedCarList = CarList;
 
-            await LoadContent();
+            _entryList = await _entryListService.GetEntryListAsync();
+            if (_entryList is null) { return; }
+            EntryList = new(_entryList.Entries);
+            UpdateEntryListString();
         }
 
-        private async Task LoadContent()
-        {
-            var list = await _contentLoaderService.LoadCars();
-
-            CarList = list.OrderBy(c => c.Name).ToList();
-            _cachedList = CarList;
-
-            ProgressBarVisible = Visibility.Collapsed;
-            CarListVisible = Visibility.Visible;
-        }
-
-        partial void OnCarListSearchBarChanged(string value)
+        partial void OnCarSearchBarChanged(string value)
         {
             if (String.IsNullOrEmpty(value) || String.IsNullOrWhiteSpace(value))
             {
-                CarList = _cachedList;
+                CarList = _cachedCarList;
                 return;
             }
 
-            var list = _cachedList
+            var list = _cachedCarList
                 .Where(c => c.Name.Contains(value, StringComparison.OrdinalIgnoreCase))
                 .OrderBy(c => c.Name);
 
             CarList = list.ToList();
         }
 
-        partial void OnSelectedCarChanged(Car? value)
+        public void AddCarToEntryList(Car car)
         {
-            IsCarSelected = value != null;
-
-            if (value != null)
-            {
-                AvailableSkins = value.Skins;
-                SelectedSkin = AvailableSkins.FirstOrDefault();
-            }
+            EntryList.Add(new(car));
+            UpdateEntryList();
         }
 
-        partial void OnSelectedSkinChanged(Skin? value)
+        [RelayCommand]
+        public void DeleteCarEntry(CarEntry car)
         {
-            if (value != null)
+            EntryList.Remove(car);
+            UpdateEntryList();
+        }
+
+        [RelayCommand]
+        public void CopyEntryList()
+        {
+            DataPackage data = new();
+            data.RequestedOperation = DataPackageOperation.Copy;
+            data.SetText(EntryListString);
+            Clipboard.SetContent(data);
+        }
+
+        [RelayCommand]
+        public void CopyCarSelection()
+        {
+            DataPackage data = new();
+            data.RequestedOperation = DataPackageOperation.Copy;
+            data.SetText(CarSelectionString);
+            Clipboard.SetContent(data);
+        }
+
+        public void SetCarEntrySkin(CarEntry carEntry, string skinId)
+        {
+            foreach (var entry in EntryList)
             {
-                Image img = new();
-                BitmapImage bitmap = new();
-                Uri uri = new Uri(value.PreviewPath);
-                bitmap.UriSource = uri;
-                SkinPreview = bitmap;
+                if (entry != carEntry) { continue; }
+                entry.SelectedSkin = skinId;
             }
+
+            UpdateEntryList();
+        }
+
+        public void SetCarEntryBallast(CarEntry carEntry, int ballast)
+        {
+            foreach (var entry in EntryList)
+            {
+                if (entry != carEntry) { continue; }
+                entry.Ballast = ballast;
+            }
+
+            UpdateEntryList();
+        }
+
+        public void SetCarEntryRestrictor(CarEntry carEntry, int restrictor)
+        {
+            foreach (var entry in EntryList)
+            {
+                if (entry != carEntry) { continue; }
+                entry.Restrictor = restrictor;
+            }
+
+            UpdateEntryList();
+        }
+
+        private void UpdateEntryList()
+        {
+            _entryListService.UpdateEntryListAsync(EntryList.ToList());
+            UpdateEntryListString();
+        }
+
+        private void UpdateEntryListString()
+        {
+            EntryListString = _entryListService.BuildEntryList(EntryList.ToList());
+            CarSelectionString = _entryListService.BuildCarSelection(EntryList.ToList());
         }
     }
 }

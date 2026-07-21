@@ -30,8 +30,8 @@ namespace SVGLClubConfigHelper
     /// </summary>
     public partial class App : Application
     {
-        private Window? _window;
         public static IHost? Host { get; private set; }
+        public static Window? MainWindow { get; private set; }
 
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
@@ -48,21 +48,22 @@ namespace SVGLClubConfigHelper
         /// <param name="args">Details about the launch request and process.</param>
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
-            _window = new MainWindow();
-            _window.Activate();
-
             Host = Microsoft.Extensions.Hosting.Host
             .CreateDefaultBuilder()
             .ConfigureServices((context, services) =>
             {
-                services.AddSingleton<IFilePickerService>(new FilePickerService(_window.AppWindow.Id));
                 services.AddSingleton<ISettingsService, SettingsService>();
                 services.AddSingleton<IContentLoaderService, ContentLoaderService>();
+                services.AddSingleton<IContentLibraryService, ContentLibraryService>();
+                services.AddSingleton<IEntryListService, EntryListService>();
 
                 services.AddTransient<SettingsViewModel>();
                 services.AddTransient<EntryListEditorViewModel>();
             })
             .Build();
+
+            MainWindow = new MainWindow();
+            MainWindow.Activate();
         }
     }
 }

@@ -21,217 +21,233 @@
         Text="Entry List Editor"
         Style="{StaticResource SVGLPageTitleStyle}"/>
 
-        <!-- Progress Bar Row -->
+        <!-- Loading Error/Warning Row -->
         <Grid
-            Visibility="{x:Bind ViewModel.ProgressBarVisible, Mode=OneWay}"
+            Visibility="{x:Bind ViewModel.CarListLoadingError, Mode=OneWay}"
             Grid.Row="1"
             Margin="20">
 
-            <StackPanel>
-                <ProgressBar
-                    IsIndeterminate="True"
-                    ShowPaused="False"
-                    ShowError="{x:Bind ViewModel.CarListLoadingError, Mode=OneWay}"
-                    HorizontalAlignment="Stretch" 
-                    VerticalAlignment="Center" />
-
-                <InfoBar
-                    IsOpen="{x:Bind ViewModel.CarListLoadingError, Mode=OneWay}" 
-                    Severity="Error"
-                    Title="Error"
-                    Message="Cannot load content folder, make sure content folder is set in Settings to the correct directory."/>
-            </StackPanel>
+            <InfoBar
+                IsOpen="{x:Bind ViewModel.CarListLoadingError, Mode=OneWay}" 
+                Severity="Error"
+                Title="Error"
+                Message="Cannot load content folder, view settings to set correct directory and load content."/>
             
         </Grid>
         
         <!-- Content Row -->
         <Grid
-            Visibility="{x:Bind ViewModel.CarListVisible, Mode=OneWay}"
             Grid.Row="1"
             Margin="20">
 
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="0.5*" />
-                    <ColumnDefinition Width="0.5*" />
+                    <ColumnDefinition Width="0.4*" />
+                    <ColumnDefinition Width="0.6*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- Car List Column -->
+                <!-- Car Selection Column -->
                 <Grid
                     Grid.Column="0"
-                    Margin="0, 0, 6, 0">
+                    Margin="6">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    
-                    <TextBox 
+
+                    <TextBox
                         Grid.Row="0"
                         PlaceholderText="Search"
                         Margin="0, 0, 0, 6"
-                        Text="{x:Bind ViewModel.CarListSearchBar, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        Text="{x:Bind ViewModel.CarSearchBar, Mode=TwoWay}" />
 
                     <ListView
-                        Background="{StaticResource SolidBackgroundFillColorBaseBrush}"
                         Grid.Row="1"
                         x:Name="CarListView"
-                        SelectionMode="Single"
-                        SelectedItem="{x:Bind ViewModel.SelectedCar, Mode=TwoWay}"
-                        ItemsSource="{x:Bind ViewModel.CarList, Mode=OneWay}">
+                        ItemsSource="{x:Bind ViewModel.CarList, Mode=OneWay}"
+                        BorderThickness="1"
+                        CanDragItems="True"
+                        DragItemsStarting="CarListView_DragItemsStarting"
+                        BorderBrush="{ThemeResource ControlStrongStrokeColorDefaultBrush}" >
 
                         <ListView.ItemTemplate>
                             <DataTemplate x:DataType="models:Car">
-                                <Grid>
+                                <Grid
+                                    Margin="12">
+
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="0.1*" />
+                                        <ColumnDefinition Width="0.9*" />
                                     </Grid.ColumnDefinitions>
 
                                     <Image
-                                        MaxHeight="20"
-                                        Source="{x:Bind BadgeImagePath}"
-                                        Grid.Column="0" />
+                                        Grid.Column="0"
+                                        Source="{x:Bind BadgeImagePath, Mode=OneWay}"
+                                        MaxHeight="30" 
+                                        Margin="0, 0, 12, 0" />
 
                                     <TextBlock
                                         Grid.Column="1"
-                                        Text="{x:Bind Name}"
-                                        Margin="12, 0, 0, 0"
-                                        Style="{StaticResource BodyLargeStrongTextBlockStyle}" />
-                                    
-                                </Grid>
+                                        FontWeight="Bold"
+                                        Style="{StaticResource BodyLargeTextBlockStyle}"
+                                        Text="{x:Bind Name, Mode=OneWay}" />
 
+                                </Grid>
                             </DataTemplate>
                         </ListView.ItemTemplate>
-
                     </ListView>
                 </Grid>
             
-                <!-- Car selection column -->
-                <Grid
+                <!-- Car Entry List Column -->
+                <Grid 
                     Grid.Column="1"
-                    Margin="6, 0, 0, 0"
-                    Visibility="{x:Bind ViewModel.IsCarSelected, Mode=OneWay}">
+                    Margin="6">
 
                     <Grid.RowDefinitions>
                         <RowDefinition Height="0.5*" />
                         <RowDefinition Height="0.5*" />
                     </Grid.RowDefinitions>
-                    
-                    <!-- Skin selection/preview -->
-                    <Grid
-                        Grid.Row="0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="0.5*" />
-                            <ColumnDefinition Width="0.5*" />
-                        </Grid.ColumnDefinitions>
 
-                        <ListView
-                            Background="{StaticResource SolidBackgroundFillColorBaseBrush}"
-                            Grid.Column="0"
-                            x:Name="SkinListView"
-                            SelectionMode="Single"
-                            SelectedItem="{x:Bind ViewModel.SelectedSkin, Mode=TwoWay}"
-                            ItemsSource="{x:Bind ViewModel.AvailableSkins, Mode=OneWay}" >
+                    <ListView
+                        Grid.Row="0"
+                        x:Name="CarEntryListView"
+                        ItemsSource="{x:Bind ViewModel.EntryList, Mode=TwoWay}"
+                        SelectedItem="{x:Bind ViewModel.SelectedCarEntry, Mode=TwoWay}"
+                        BorderThickness="1"
+                        AllowDrop="True"
+                        DragOver="CarEntryListView_DragOver"
+                        Drop="CarEntryListView_Drop"
+                        BorderBrush="{ThemeResource ControlStrongStrokeColorDefaultBrush}" >
 
-                            <ListView.ItemTemplate>
-                                <DataTemplate x:DataType="models:Skin">
-                                    <TextBlock
-                                       Text="{x:Bind SkinId}" />
-                                </DataTemplate>
-                            </ListView.ItemTemplate>
-                        </ListView>
-
-                        <Grid
-                            Grid.Column="1"
-                            Margin="6, 0, 0, 0">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="0.5*" />
-                                <RowDefinition Height="0.25*" />
-                                <RowDefinition Height="0.25*" />
-                            </Grid.RowDefinitions>
-                            
-                            <Image
-                                Grid.Row="0"
-                                Source="{x:Bind ViewModel.SkinPreview, Mode=OneWay}"/>
-
-                            <Grid
-                                Grid.Row="1"
-                                Margin="0, 6, 0, 0">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="models:CarEntry">
                                 <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="0.1*" />
+                                        <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
 
-                                    <TextBlock
-                                        Grid.Row="0"
-                                        Grid.Column="0"
-                                        Text="BHP: "
-                                        FontWeight="SemiBold" />
+                                    <Grid
+                                        Grid.Column="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="0.5*" />
+                                            <ColumnDefinition Width="0.5*" />
+                                        </Grid.ColumnDefinitions>
 
-                                    <TextBlock
-                                        Grid.Row="0"
+                                        <TextBlock
+                                            Grid.Column="0"
+                                            Text="{x:Bind Car.Name}" 
+                                            VerticalAlignment="Center"/>
+
+                                        <ComboBox
+                                            Grid.Column="1"
+                                            Width="250"
+                                            ItemsSource="{x:Bind Car.Skins}"
+                                            DisplayMemberPath="SkinId"
+                                            Loaded="CarEntryComboBox_OnLoaded"
+                                            SelectionChanged="CarEntryComboBox_SelectionChanged" />
+
+                                        <StackPanel
+                                            Grid.Column="2"
+                                            Spacing="6"
+                                            Orientation="Horizontal" >
+
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                Text="Ballast: " />
+                                            <TextBox
+                                                InputScope="Number"
+                                                Loaded="BallastTextBox_OnLoaded"
+                                                TextChanged="BallastTextBox_OnTextChanged"/>
+                                        </StackPanel>
+                                        
+                                        <StackPanel
+                                            Grid.Column="3"
+                                            Spacing="6"
+                                            Orientation="Horizontal" >
+
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                Text="Restrictor: " />
+                                            <TextBox
+                                                InputScope="Number"
+                                                Loaded="RestrictorTextBox_OnLoaded"
+                                                TextChanged="RestrictorTextBox_OnTextChanged"/>
+                                        </StackPanel>
+
+                                    </Grid>
+
+                                    <Button
                                         Grid.Column="1"
-                                        Margin="6, 0, 0, 0"
-                                        Text="{x:Bind ViewModel.SelectedCar.Specs.BHP, Mode=OneWay}" />
+                                        HorizontalContentAlignment="Right"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        ToolTipService.ToolTip="Delete"
+                                        Command="{Binding DataContext.DeleteCarEntryCommand, ElementName=CarEntryListView}"
+                                        CommandParameter="{Binding}">
 
-                                    <TextBlock
-                                        Grid.Row="1"
-                                        Grid.Column="0"
-                                        Text="Torque: "
-                                        FontWeight="SemiBold" />
-
-                                    <TextBlock
-                                        Grid.Row="1"
-                                        Grid.Column="1"
-                                        Margin="6, 0, 0, 0"
-                                        Text="{x:Bind ViewModel.SelectedCar.Specs.Torque, Mode=OneWay}" />
-
-                                    <TextBlock
-                                        Grid.Row="2"
-                                        Grid.Column="0"
-                                        Text="Weight: "
-                                        FontWeight="SemiBold" />
-
-                                    <TextBlock
-                                        Grid.Row="2"
-                                        Grid.Column="1"
-                                        Margin="6, 0, 0, 0"
-                                        Text="{x:Bind ViewModel.SelectedCar.Specs.Weight, Mode=OneWay}" />
-
-                                    <TextBlock
-                                        Grid.Row="3"
-                                        Grid.Column="0"
-                                        Text="P/W Ratio: "
-                                        FontWeight="SemiBold" />
-
-                                    <TextBlock
-                                        Grid.Row="3"
-                                        Grid.Column="1"
-                                        Margin="6, 0, 0, 0"
-                                        Text="{x:Bind ViewModel.SelectedCar.Specs.PWRatio, Mode=OneWay}" />
+                                        <FontIcon
+                                            FontFamily="Segoe Fluent Icons"
+                                            Glyph="&#xE74D;" />
+                                    </Button>
                                 </Grid>
-                            </Grid>
 
-                            <Grid
-                                Grid.Row="2" >
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <Grid
+                        Grid.Row="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBox
+                            Grid.Row="0"
+                            Margin="0, 6, 0, 6"
+                            AcceptsReturn="True"
+                            TextWrapping="Wrap"
+                            Text="{x:Bind ViewModel.EntryListString, Mode=OneWay}"
+                            IsReadOnly="True" />
+
+                        <Grid
+                            Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBox
+                                Grid.Column="0"
+                                Margin="0, 6, 6, 6"
+                                Text="{x:Bind ViewModel.CarSelectionString, Mode=OneWay}"
+                                IsReadOnly="True" />
+
+                            <StackPanel
+                                Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                HorizontalAlignment="Right" >
+
                                 <Button
-                                    VerticalAlignment="Bottom"
                                     HorizontalAlignment="Right"
-                                    Content="Add Car" />
-                            </Grid>
+                                    Content="Copy Car Selection"
+                                    Command="{x:Bind ViewModel.CopyCarSelectionCommand}"/>
+                                <Button
+                                    HorizontalAlignment="Right"
+                                    Content="Copy Entry List"
+                                    Command="{x:Bind ViewModel.CopyEntryListCommand}"/>
+                            </StackPanel>
                         </Grid>
                         
                     </Grid>
                 </Grid>
+
             </Grid>
+            
         </Grid>
     </Grid>
 </Page>

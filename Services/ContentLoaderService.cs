@@ -1,23 +1,24 @@
 ﻿using SVGLClubConfigHelper.Models;
+using SVGLClubConfigHelper.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Windows.Storage;
 
 namespace SVGLClubConfigHelper.Services
 {
     public class ContentLoaderService : IContentLoaderService
     {
-        private readonly IFilePickerService _filePickerService;
         private readonly ISettingsService _settingsService;
 
-        public ContentLoaderService(IFilePickerService filePickerService, ISettingsService settingService)
+        public ContentLoaderService(ISettingsService settingService)
         {
-            _filePickerService = filePickerService;
             _settingsService = settingService;
         }
 
@@ -32,23 +33,33 @@ namespace SVGLClubConfigHelper.Services
             return Directory.Exists(carPath) && Directory.Exists(trackPath);
         }
 
+        public async Task LoadContent()
+        {
+            List<Car> cars = await LoadCars();
+            Content content = new(cars);
+
+            LocalFileSerializer serializer = new();
+            await serializer.SaveFile("ContentCache.json", content);
+        }
+
         public async Task<List<Car>> LoadCars()
         {
             List<Car> cars = new();
-            if (!CanLoadContent()) { return cars; }
 
             string contentPath = _settingsService.ContentFolderPath;
+            if (!CanLoadContent()) { return cars; }
+
             string carPath = Path.Combine(contentPath, @"cars\");
 
             foreach (var carDir in Directory.GetDirectories(carPath))
             {
                 if (!Directory.EnumerateFileSystemEntries(carDir).Any()) { continue; }
 
+                CarParser parser = new(carDir);
                 string carId = Path.GetFileName(carDir);
-                string carName = GetCarName(carDir);
-                string skinsPath = Path.Combine(carDir, "skins");
-                List<Skin> skins = GetSkins(skinsPath);
-                Specs specs = GetCarSpecs(carDir);
+                string carName = parser.GetCarName();
+                List<Skin> skins = parser.GetSkins();
+                Specs specs = parser.GetCarSpecs();
                 
                 if (!skins.Any()) { continue; }
 
@@ -59,62 +70,12 @@ namespace SVGLClubConfigHelper.Services
 
             return cars;
         }
-
-        private string GetCarName(string carDir)
-        {
-            string uiPath = Path.Combine(carDir, "ui", "ui_car.json");
-            string fallbackName = Path.GetFileName(carDir);
-            if (!File.Exists(uiPath)) { return fallbackName; }
-
-            string text = File.ReadAllText(uiPath);
-            var match = Regex.Match(text, "\"name\"\\s*:\\s*\"(?<name>.*?)\"", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-
-            if (match.Success) { return match.Groups["name"].Value.Trim(); }
-            else { return fallbackName; }
-        }
-
-        private List<Skin> GetSkins(string skinsPath)
-        {
-            List<Skin> skins = new();
-
-            foreach (var skinDir in Directory.GetDirectories(skinsPath))
-            {
-                if (!Directory.EnumerateFileSystemEntries(skinDir).Any()) { continue; }
-
-                string skinId = Path.GetFileName(skinDir);
-                string previewPath = Path.Combine(skinDir, "preview.jpg");
-
-                if (!File.Exists(previewPath)) { continue; }
-
-                skins.Add(new Skin(skinId, previewPath));
-            }
-
-            return skins;
-        }
-
-        private Specs GetCarSpecs(string carDir)
-        {
-            string uiPath = Path.Combine(carDir, "ui", "ui_car.json");
-            if (!File.Exists(uiPath)) { return new(); }
-
-            string text = File.ReadAllText(uiPath);
-            var bhpMatch = Regex.Match(text, "\"bhp\"\\s*:\\s*\"(?<bhp>.*?)\"", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-            var torqueMatch = Regex.Match(text, "\"torque\"\\s*:\\s*\"(?<torque>.*?)\"", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-            var weightMatch = Regex.Match(text, "\"weight\"\\s*:\\s*\"(?<weight>.*?)\"", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-            var pwratioMatch = Regex.Match(text, "\"pwratio\"\\s*:\\s*\"(?<pwratio>.*?)\"", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-
-            string bhp = bhpMatch.Success ? bhpMatch.Groups["bhp"].Value.Trim() : "N/A";
-            string torque = torqueMatch.Success ? torqueMatch.Groups["torque"].Value.Trim() : "N/A";
-            string weight = weightMatch.Success ? weightMatch.Groups["weight"].Value.Trim() : "N/A";
-            string pwratio = pwratioMatch.Success ? pwratioMatch.Groups["pwratio"].Value.Trim() : "N/A";
-
-            return new Specs(bhp, torque, weight, pwratio);
-        }
     }
 
     public interface IContentLoaderService
     {
         bool CanLoadContent();
+        Task LoadContent();
         Task<List<Car>> LoadCars();
     }
 }

@@ -24,10 +24,23 @@ namespace SVGLClubConfigHelper.Services
                 _localSettings.Values["ContentFolderPath"] = value;
             }
         }
+
+        public string LastContentLoadDate
+        {
+            get
+            {
+                return _localSettings.Values["LastContentLoadDate"] as string ?? "01-01-2000";
+            }
+            set
+            {
+                _localSettings.Values["LastContentLoadDate"] = value;
+            }
+        }
     }
 
     public interface ISettingsService
     {
         string ContentFolderPath { get; set; }
+        string LastContentLoadDate { get; set; }
     }
 }

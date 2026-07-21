@@ -25,31 +25,60 @@
             Grid.Row="1"
             Margin="20">
 
-            <StackPanel
-                Spacing="8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
 
                 <TextBlock
+                    Grid.Row="0"
                     Text="AC Content Folder Location"
                     Style="{StaticResource SubtitleTextBlockStyle}" />
 
-                <Grid>
+                <Grid
+                    Grid.Row="1"
+                    Margin="0, 6, 0, 0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="0.8*" />
-                        <ColumnDefinition Width="0.2*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
                     <TextBox
+                        Grid.Column="0" 
                         Text="{x:Bind ViewModel.ContentFolderPath, Mode=TwoWay}"
                         IsReadOnly="True"
-                        Grid.Column="0" 
                         Margin="0, 0, 8, 0"/>
 
                     <Button
-                        Content="Browse"
                         Grid.Column="1" 
+                        Content="Browse"
+                        Width="100"
+                        Margin="0, 0, 8, 0"
                         Command="{x:Bind ViewModel.BrowseContentFolderCommand}"/>
+
+                    <Button
+                        Grid.Column="2"
+                        IsEnabled="{x:Bind ViewModel.CanLoadContent, Mode=OneWay}"
+                        Content="Load"
+                        Width="100"
+                        Command="{x:Bind ViewModel.LoadContentFolderCommand}"/>
                 </Grid>
-            </StackPanel>
+
+                <Grid
+                    Grid.Row="2"
+                    Margin="0, 6, 0, 0">
+
+                    <TextBlock
+                        Text="{x:Bind ViewModel.LastLoadDate, Mode=OneWay}" />
+                </Grid>
+                
+            </Grid>
+            
         </Grid>
+
     </Grid>
 </Page>
